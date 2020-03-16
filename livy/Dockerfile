@@ -18,8 +18,10 @@ RUN chown -R hadoop /home/hadoop/livy/
 
 EXPOSE 8998
 
-ADD entrypoint.sh .
+# Start entrypoint.sh to start livy
+#ADD entrypoint.sh .
 
-RUN chmod +x entrypoint.sh
+#RUN chmod +x entrypoint.sh
 
-ENTRYPOINT ["/entrypoint.sh"]
+#ENTRYPOINT ["/entrypoint.sh"]
+

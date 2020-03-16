@@ -6,4 +6,6 @@ else
   export LIBPROCESS_IP=$HOST
 fi
 
+#/usr/sbin/sshd -D
 /home/hadoop/livy/apache-livy-0.6.0-incubating-bin/bin/livy-server $@
+

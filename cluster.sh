@@ -3,7 +3,7 @@
 # Bring the services up
 function startServices {
   docker start nodemaster node2 node3
-  sleep 5
+  sleep 10 
   echo ">> Starting hdfs ..."
   docker exec -u hadoop -it nodemaster start-dfs.sh
   sleep 5
@@ -29,11 +29,14 @@ function startServices {
   sleep 5
   echo ">> Starting Hive Metastore ..."
   docker exec -u hadoop -d nodemaster hive --service metastore
+  echo ">> Starting Livy ... "
+  docker exec -u hadoop -d nodemaster /home/hadoop/livy/apache-livy-0.6.0-incubating-bin/bin/livy-server start 
   echo "Hadoop info @ nodemaster: http://172.18.1.1:8088/cluster"
   echo "DFS Health @ nodemaster : http://172.18.1.1:50070/dfshealth"
   echo "MR-JobHistory Server @ nodemaster : http://172.18.1.1:19888"
   echo "Spark info @ nodemaster  : http://172.18.1.1:8080"
   echo "Spark History Server @ nodemaster : http://172.18.1.1:18080"
+
 }
 
 function stopServices {
@@ -42,7 +45,7 @@ function stopServices {
   docker exec -u hadoop -d node2 stop-slave.sh
   docker exec -u hadoop -d node3 stop-slave.sh
   echo ">> Stopping containers ..."
-  docker stop nodemaster node2 node3 psqlhms
+  docker stop nodemaster node2 node3 psqlhms jenkins sshd
 }
 
 if [[ $1 = "start" ]]; then
@@ -55,9 +58,11 @@ if [[ $1 = "start" ]]; then
   
   # 3 nodes
   echo ">> Starting nodes master and worker nodes ..."
-  docker run -p 8998:8998 -d --net hadoopnet --ip 172.18.1.1 --hostname nodemaster --add-host node2:172.18.1.2 --add-host node3:172.18.1.3 --name nodemaster -it livy 
+  docker run -p 8998:8998 -d -v DataVolume4:/shared/jars --net hadoopnet --ip 172.18.1.1 --hostname nodemaster --add-host node2:172.18.1.2 --add-host node3:172.18.1.3 --name nodemaster -it livy
   docker run -d --net hadoopnet --ip 172.18.1.2 --hostname node2 --add-host nodemaster:172.18.1.1 --add-host node3:172.18.1.3 --name node2 -it spark
   docker run -d --net hadoopnet --ip 172.18.1.3 --hostname node3 --add-host nodemaster:172.18.1.1 --add-host node2:172.18.1.2 --name node3 -it spark
+  docker run -d -p 49100:22 -v DataVolume4:/shared/jars --ip 172.18.2.1 --net hadoopnet --name sshd sshd
+  docker run -d -v jenkins_home:/var/jenkins_home --name jenkins -p 8080:8080 -p 50000:50000 --net hadoopnet jenkins
 
   # Format nodemaster
   echo ">> Formatting hdfs ..."
@@ -69,7 +74,7 @@ fi
 
 if [[ $1 = "stop" ]]; then
   stopServices
-  docker rm nodemaster node2 node3 psqlhms
+  docker rm nodemaster node2 node3 psqlhms jenkins sshd
   docker network rm hadoopnet
   exit
 fi
